@@ -145,13 +145,6 @@
       <label>Password</label>
       <input type="password" id="newPassword" placeholder="Min. 6 karakter">
     </div>
-    <div class="form-group">
-      <label>Role</label>
-      <select id="newRole">
-        <option value="Operator">Operator</option>
-        <option value="Admin">Admin</option>
-      </select>
-    </div>
     <div id="signupMsg"></div>
     <button class="btn-secondary btn-block" onclick="registerUser()">
       <i class="fas fa-user-plus"></i> Daftarkan
@@ -270,65 +263,65 @@
     </div>
   </div>
 
-  <!-- Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- Firebase Libraries -->
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-  <script>
-    // ============= GANTI INI =============
-    const SUPABASE_URL = 'https://dmxrzttrziuihzvacdok.supabase.co'; // Ganti
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteHJ6dHRyeml1aWh6dmFjZG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1Njk1MTksImV4cCI6MjA3MTE0NTUxOX0.nWweTftFfotEb0Qw6zi6c2B-eJ0oPWLERqDFT0Z9p6Q'; // Ganti
-    // =====================================
+    // GANTI INI DENGAN KONFIGURASI ANDA
+    const firebaseConfig = {
+  apiKey: "AIzaSyAOldVlQTARHUhpPCpTiolztE6Bu7hm4Y4",
+  authDomain: "client-database-app-13b98.firebaseapp.com",
+  projectId: "client-database-app-13b98",
+  storageBucket: "client-database-app-13b98.firebasestorage.app",
+  messagingSenderId: "989220863076",
+  appId: "1:989220863076:web:727f5afaaf43cfa8fdb371"
+    };
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+    const storage = getStorage();
+
     let currentUser = null;
-    const ADMIN_EMAILS = ['admin@perusahaan.com']; // Tambahkan email admin
+    const ADMIN_EMAILS = ['admin@perusahaan.com']; // Ganti dengan email Anda
 
-    async function login() {
+    // Login
+    window.login = async function() {
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        currentUser = userCredential.user;
+      } catch (error) {
         document.getElementById('loginMsg').innerHTML = `<div class="error">${error.message}</div>`;
-      } else {
-        currentUser = data.user;
-        document.getElementById('userDisplay').innerText = `Hai, ${email}`;
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        loadKaryawan();
       }
-    }
+    };
 
-    async function registerUser() {
+    // Daftar User (Hanya Admin)
+    window.registerUser = async function() {
       if (!ADMIN_EMAILS.includes(currentUser.email)) {
         alert('Hanya Admin yang bisa mendaftarkan user.');
         return;
       }
       const email = document.getElementById('newEmail').value;
       const password = document.getElementById('newPassword').value;
-      const role = document.getElementById('newRole').value;
-
-      const { error: authError } = await supabase.auth.signUp({ email, password });
-      if (authError) {
-        document.getElementById('signupMsg').innerHTML = `<div class="error">${authError.message}</div>`;
-        return;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        document.getElementById('signupMsg').innerHTML = `<div class="success">User berhasil didaftarkan!</div>`;
+      } catch (error) {
+        document.getElementById('signupMsg').innerHTML = `<div class="error">${error.message}</div>`;
       }
+    };
 
-      const { error: dbError } = await supabase.from('users').insert([{ email, role }]);
-      if (dbError) {
-        document.getElementById('signupMsg').innerHTML = `<div class="error">Gagal simpan role</div>`;
-      } else {
-        document.getElementById('signupMsg').innerHTML = `<div class="success">Berhasil daftar!</div>`;
-      }
-    }
-
-    async function addKaryawan() {
+    // Tambah Karyawan
+    window.addKaryawan = async function() {
       const nama = document.getElementById('nama').value.trim();
       const nik = document.getElementById('nik').value;
-      const alamat = document.getElementById('alamat').value;
-      const telp = document.getElementById('telp').value;
 
       if (!nama || !/^[0-9]{16}$/.test(nik)) {
         alert('Nama dan NIK (16 digit) wajib');
@@ -347,109 +340,88 @@
       const dokumen = {};
       for (const [key, file] of Object.entries(files)) {
         if (file) {
-          const filePath = `karyawan_${Date.now()}_${key}`;
-          const { error } = await supabase.storage
-            .from('dokumen-karyawan')
-            .upload(filePath, file);
-          if (!error) {
-            dokumen[key] = filePath;
-          }
+          const filePath = `karyawan/${Date.now()}_${key}`;
+          const fileRef = ref(storage, filePath);
+          await uploadBytes(fileRef, file);
+          dokumen[key] = await getDownloadURL(fileRef);
         }
       }
 
-      const { data, error } = await supabase
-        .from('karyawan')
-        .insert([{
-          nama, nik, alamat, telp, user_id: currentUser.id, dokumen
-        }]);
+      await addDoc(collection(db, 'karyawan'), {
+        nama, nik,
+        alamat: document.getElementById('alamat').value,
+        mulai: document.getElementById('mulai').value,
+        jabatan: document.getElementById('jabatan').value,
+        noreg: document.getElementById('noreg').value,
+        status: document.getElementById('status').value,
+        telp: document.getElementById('telp').value,
+        dokumen,
+        createdAt: new Date()
+      });
 
-      if (error) alert('Gagal simpan: ' + error.message);
-      else {
-        clearForm();
-        loadKaryawan();
-      }
-    }
+      clearForm();
+    };
 
-    async function loadKaryawan() {
-      const { data, error } = await supabase
-        .from('karyawan')
-        .select('*')
-        .order('id', { ascending: true });
+    // Muat Data Otomatis
+    onSnapshot(collection(db, 'karyawan'), (snapshot) => {
+      const tbody = document.querySelector('#karyawanTable tbody');
+      tbody.innerHTML = '';
+      snapshot.docs.forEach(doc => {
+        const d = doc.data();
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td>${doc.id.slice(-6)}</td>
+          <td><input type="text" value="${d.nama}" disabled class="readonly"></td>
+          <td><input type="text" value="${d.nik}"></td>
+          <td><input type="text" value="${d.alamat}"></td>
+          <td><input type="text" value="${d.jabatan}"></td>
+          <td><input type="text" value="${d.noreg}"></td>
+          <td><input type="text" value="${d.status}"></td>
+          <td><input type="text" value="${d.telp}"></td>
+          <td><button class="btn-warning" onclick="window.open('${d.dokumen.ktp || '#'}', '_blank')">Lihat</button></td>
+          <td><button class="btn-danger" onclick="deleteKaryawan('${doc.id}')">Hapus</button></td>
+        `;
+      });
+    });
 
-      if (error) {
-        console.error('Gagal muat data:', error);
-      } else {
-        const tbody = document.querySelector('#karyawanTable tbody');
-        tbody.innerHTML = '';
-        data.forEach(d => {
-          const canEdit = ADMIN_EMAILS.includes(currentUser.email);
-          const row = tbody.insertRow();
-          row.innerHTML = `
-            <td>${d.id}</td>
-            <td><input type="text" value="${d.nama}" ${canEdit ? '' : 'disabled class="readonly"'}></td>
-            <td><input type="text" value="${d.nik}"></td>
-            <td><input type="text" value="${d.alamat}"></td>
-            <td><input type="text" value="${d.jabatan}"></td>
-            <td><input type="text" value="${d.noreg}"></td>
-            <td><input type="text" value="${d.status}"></td>
-            <td><input type="text" value="${d.telp}"></td>
-            <td><button class="btn-warning" onclick="viewDoc('${JSON.stringify(d.dokumen).replace(/"/g, '&quot;')}')">Lihat</button></td>
-            <td>
-              ${canEdit 
-                ? `<button class="btn-danger" onclick="deleteKaryawan(${d.id})"><i class="fas fa-trash"></i></button>`
-                : 'Dibatasi'}
-            </td>
-          `;
-        });
-      }
-    }
-
-    function viewDoc(dokumenStr) {
-      const dokumen = JSON.parse(dokumenStr.replace(/&quot;/g, '"'));
-      const win = window.open();
-      win.document.write('<h2>Dokumen Karyawan</h2>');
-      for (const [key, path] of Object.entries(dokumen)) {
-        if (path) {
-          const url = supabase.storage.from('dokumen-karyawan').getPublicUrl(path).data.publicUrl;
-          win.document.write(`<p><a href="${url}" target="_blank">${key.toUpperCase()}</a></p>`);
-        }
-      }
-      win.document.close();
-    }
-
-    async function deleteKaryawan(id) {
+    // Hapus Karyawan
+    window.deleteKaryawan = async function(id) {
       if (confirm('Hapus data ini?')) {
-        await supabase.from('karyawan').delete().eq('id', id);
-        loadKaryawan();
+        await deleteDoc(doc(db, 'karyawan', id));
       }
-    }
+    };
 
-    function showSignup() {
+    // Logout
+    window.logout = async function() {
+      await signOut(auth);
+    };
+
+    // Cek Auth State
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('userDisplay').innerText = `Hai, ${user.email}`;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+      } else {
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+      }
+    });
+
+    window.showSignup = function() {
       if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)) {
         alert('Hanya Admin yang bisa mendaftarkan user.');
         return;
       }
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('signupScreen').style.display = 'block';
-    }
+    };
 
-    function showLogin() {
+    window.showLogin = function() {
       document.getElementById('signupScreen').style.display = 'none';
       document.getElementById('loginScreen').style.display = 'block';
-    }
-
-    async function logout() {
-      await supabase.auth.signOut();
-      location.reload();
-    }
-
-    function filterTable() {
-      const filter = document.getElementById('searchInput').value.toLowerCase();
-      document.querySelectorAll('#karyawanTable tbody tr').forEach(tr => {
-        const text = tr.textContent.toLowerCase();
-        tr.style.display = text.includes(filter) ? '' : 'none';
-      });
-    }
+    };
 
     function clearForm() {
       document.getElementById('nama').value = '';
@@ -463,28 +435,13 @@
       document.getElementById('lainnyaFile').value = '';
     }
 
-    // Cek session
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        currentUser = session.user;
-        document.getElementById('userDisplay').innerText = `Hai, ${currentUser.email}`;
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        loadKaryawan();
-      } else if (event === 'SIGNED_OUT') {
-        location.reload();
-      }
-    });
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        currentUser = data.user;
-        document.getElementById('userDisplay').innerText = `Hai, ${currentUser.email}`;
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        loadKaryawan();
-      }
-    });
+    window.filterTable = function() {
+      const filter = document.getElementById('searchInput').value.toLowerCase();
+      document.querySelectorAll('#karyawanTable tbody tr').forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        tr.style.display = text.includes(filter) ? '' : 'none';
+      });
+    };
   </script>
 </body>
 </html>
