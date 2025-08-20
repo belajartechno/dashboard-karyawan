@@ -331,7 +331,33 @@
         document.getElementById('mainApp').style.display = 'block';
 
         loadKaryawan();
-      } catch (error) {
+        async function loadKaryawan() {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'karyawan'));
+    const table = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      const row = table.insertRow();
+      row.innerHTML = `
+        <td>${data.nama}</td>
+        <td>${data.nik}</td>
+        <td>${data.alamat}</td>
+        <td>${data.mulai}</td>
+        <td>${data.jabatan}</td>
+        <td>
+          ${userRole === 'Admin' 
+            ? `<button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
+            : `<button class="btn-warning" onclick="quickReport('${data.nama}', '${data.nik}')"><i class="fas fa-flag"></i> Lapor</button>`
+          }
+        </td>
+      `;
+    });
+  } catch (error) {
+    console.error("Gagal muat data:", error);
+    alert("Gagal akses Firestore: " + error.message);
+  }
+}      } catch (error) {
         alert('Login gagal: ' + error.message);
       }
     };
