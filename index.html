@@ -42,7 +42,7 @@
       color: var(--primary);
       margin-bottom: 15px;
     }
-    input[type="text"], input[type="password"], input[type="email"], select {
+    input[type="text"], input[type="password"], input[type="email"], select, input[type="file"] {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
@@ -71,7 +71,6 @@
       text-align: center;
     }
     .mt-20 { margin-top: 20px; }
-    .mb-10 { margin-bottom: 10px; }
 
     /* Main App */
     header {
@@ -137,14 +136,6 @@
       width: 90%;
       max-width: 500px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-    .error-log {
-      background-color: #fff3cd;
-      border: 1px solid #ffeaa7;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-      color: #856404;
     }
   </style>
 </head>
@@ -234,6 +225,22 @@
         <label>Jabatan</label>
         <input type="text" id="jabatan" placeholder="Jabatan">
       </div>
+
+      <!-- Upload Dokumen -->
+      <div class="form-group">
+        <label>Upload Dokumen</label>
+        <input type="file" id="ktpFile" accept="image/*,.pdf">
+        <small>KTP</small><br>
+        <input type="file" id="kkFile" accept="image/*,.pdf">
+        <small>Kartu Keluarga</small><br>
+        <input type="file" id="ijazahFile" accept="image/*,.pdf">
+        <small>Ijazah</small><br>
+        <input type="file" id="kontrakFile" accept="image/*,.pdf">
+        <small>Kontrak Kerja</small><br>
+        <input type="file" id="lainnyaFile" accept="image/*,.pdf">
+        <small>Dokumen Lainnya</small>
+      </div>
+
       <button class="btn-primary btn-block mt-20" onclick="showReview()">
         <i class="fas fa-check-circle"></i> Review & Simpan
       </button>
@@ -250,6 +257,7 @@
             <th>Alamat</th>
             <th>Mulai</th>
             <th>Jabatan</th>
+            <th>Dokumen</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -282,26 +290,27 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     // ============= GANTI INI DENGAN KONFIGURASI ANDA =============
     const firebaseConfig = {
-  apiKey: "AIzaSyBWb4fTbNwzWMqII03ETGOcQHeFjB8ytlc",
-  authDomain: "dashboard-karyawan.firebaseapp.com",
-  projectId: "dashboard-karyawan",
-  storageBucket: "dashboard-karyawan.firebasestorage.app",
-  messagingSenderId: "566319746473",
-  appId: "1:566319746473:web:06011d221a3ca3f38a88b8"
+      apiKey: "AIzaSyBWb4fTbNwzWMqII03ETGOcQHeFjB8ytlc",
+      authDomain: "dashboard-karyawan.firebaseapp.com",
+      projectId: "dashboard-karyawan",
+      storageBucket: "dashboard-karyawan.firebasestorage.app",
+      messagingSenderId: "566319746473",
+      appId: "1:566319746473:web:06011d221a3ca3f38a88b8"
     };
     // ============================================================
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getFirestore();
+    const storage = getStorage();
 
     let currentUser = null;
     let userRole = 'Operator';
     let pendingData = {};
-    let editingItemId = null;
 
     // Login
     window.login = async function() {
@@ -331,33 +340,7 @@
         document.getElementById('mainApp').style.display = 'block';
 
         loadKaryawan();
-        async function loadKaryawan() {
-  try {
-    const querySnapshot = await getDocs(collection(db, 'karyawan'));
-    const table = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
-    table.innerHTML = '';
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      const row = table.insertRow();
-      row.innerHTML = `
-        <td>${data.nama}</td>
-        <td>${data.nik}</td>
-        <td>${data.alamat}</td>
-        <td>${data.mulai}</td>
-        <td>${data.jabatan}</td>
-        <td>
-          ${userRole === 'Admin' 
-            ? `<button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
-            : `<button class="btn-warning" onclick="quickReport('${data.nama}', '${data.nik}')"><i class="fas fa-flag"></i> Lapor</button>`
-          }
-        </td>
-      `;
-    });
-  } catch (error) {
-    console.error("Gagal muat data:", error);
-    alert("Gagal akses Firestore: " + error.message);
-  }
-}      } catch (error) {
+      } catch (error) {
         alert('Login gagal: ' + error.message);
       }
     };
@@ -419,8 +402,26 @@
         nama, nik,
         alamat: document.getElementById('alamat').value,
         mulai: document.getElementById('mulai').value,
-        jabatan: document.getElementById('jabatan').value
+        jabatan: document.getElementById('jabatan').value,
+        dokumen: {}
       };
+
+      // Simpan nama file sementara
+      if (document.getElementById('ktpFile').files[0]) {
+        pendingData.dokumen.ktp = document.getElementById('ktpFile').files[0].name;
+      }
+      if (document.getElementById('kkFile').files[0]) {
+        pendingData.dokumen.kk = document.getElementById('kkFile').files[0].name;
+      }
+      if (document.getElementById('ijazahFile').files[0]) {
+        pendingData.dokumen.ijazah = document.getElementById('ijazahFile').files[0].name;
+      }
+      if (document.getElementById('kontrakFile').files[0]) {
+        pendingData.dokumen.kontrak = document.getElementById('kontrakFile').files[0].name;
+      }
+      if (document.getElementById('lainnyaFile').files[0]) {
+        pendingData.dokumen.lainnya = document.getElementById('lainnyaFile').files[0].name;
+      }
 
       const reviewDiv = document.getElementById('reviewData');
       reviewDiv.innerHTML = `
@@ -429,6 +430,14 @@
         <p><strong>Alamat:</strong> ${pendingData.alamat || '-'}</p>
         <p><strong>Mulai:</strong> ${pendingData.mulai || '-'}</p>
         <p><strong>Jabatan:</strong> ${pendingData.jabatan || '-'}</p>
+        <p><strong>Dokumen:</strong></p>
+        <ul>
+          <li>KTP: ${pendingData.dokumen.ktp || 'Tidak ada'}</li>
+          <li>KK: ${pendingData.dokumen.kk || 'Tidak ada'}</li>
+          <li>Ijazah: ${pendingData.dokumen.ijazah || 'Tidak ada'}</li>
+          <li>Kontrak: ${pendingData.dokumen.kontrak || 'Tidak ada'}</li>
+          <li>Lainnya: ${pendingData.dokumen.lainnya || 'Tidak ada'}</li>
+        </ul>
       `;
 
       document.getElementById('reviewModal').style.display = 'flex';
@@ -436,7 +445,32 @@
 
     // Simpan Data
     window.saveData = async function() {
-      await addDoc(collection(db, 'karyawan'), pendingData);
+      // Upload dokumen
+      const files = {
+        ktp: document.getElementById('ktpFile').files[0],
+        kk: document.getElementById('kkFile').files[0],
+        ijazah: document.getElementById('ijazahFile').files[0],
+        kontrak: document.getElementById('kontrakFile').files[0],
+        lainnya: document.getElementById('lainnyaFile').files[0]
+      };
+
+      const dokumenURL = {};
+      for (const [key, file] of Object.entries(files)) {
+        if (file) {
+          const filePath = `karyawan/${currentUser.uid}/${Date.now()}_${key}`;
+          const fileRef = ref(storage, filePath);
+          await uploadBytes(fileRef, file);
+          dokumenURL[key] = await getDownloadURL(fileRef);
+        }
+      }
+
+      // Simpan data ke Firestore
+      await addDoc(collection(db, 'karyawan'), {
+        ...pendingData,
+        dokumen: dokumenURL,
+        userId: currentUser.uid
+      });
+
       closeReview();
       clearForm();
       loadKaryawan();
@@ -473,6 +507,9 @@
           <td>${data.mulai}</td>
           <td>${data.jabatan}</td>
           <td>
+            <button class="btn-secondary" onclick="viewDocuments('${doc.id}')">Lihat</button>
+          </td>
+          <td>
             ${userRole === 'Admin' 
               ? `<button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
               : `<button class="btn-warning" onclick="quickReport('${data.nama}', '${data.nik}')"><i class="fas fa-flag"></i> Lapor</button>`
@@ -481,6 +518,27 @@
         `;
       });
     }
+
+    // Lihat Dokumen
+    window.viewDocuments = async function(id) {
+      const docSnap = await getDoc(doc(db, 'karyawan', id));
+      const data = docSnap.data();
+      const win = window.open();
+      win.document.write('<h2>Dokumen Karyawan</h2>');
+      for (const [key, url] of Object.entries(data.dokumen)) {
+        if (url) {
+          const label = {
+            ktp: 'KTP',
+            kk: 'Kartu Keluarga',
+            ijazah: 'Ijazah',
+            kontrak: 'Kontrak Kerja',
+            lainnya: 'Dokumen Lainnya'
+          }[key];
+          win.document.write(`<p><a href="${url}" target="_blank">${label}</a></p>`);
+        }
+      }
+      win.document.close();
+    };
 
     // Hapus Data
     window.deleteItem = async function(id) {
@@ -502,6 +560,11 @@
       document.getElementById('alamat').value = '';
       document.getElementById('mulai').value = '';
       document.getElementById('jabatan').value = '';
+      document.getElementById('ktpFile').value = '';
+      document.getElementById('kkFile').value = '';
+      document.getElementById('ijazahFile').value = '';
+      document.getElementById('kontrakFile').value = '';
+      document.getElementById('lainnyaFile').value = '';
     }
 
     // Cek Auth State
