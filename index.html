@@ -4,59 +4,123 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Database Karyawan</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    :root {
+      --primary: #4CAF50;
+      --secondary: #2196F3;
+      --danger: #f44336;
+      --dark: #333;
+      --light: #f4f4f4;
+      --white: #fff;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-    h2 {
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background-color: white;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
+      font-family: 'Roboto', sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
       padding: 10px;
-      text-align: center;
     }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
-    input[type="text"], input[type="date"], select {
-      padding: 5px;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    .form-group {
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 8px 15px;
-      margin: 5px 3px;
-      border: none;
-      cursor: pointer;
-    }
-    button.save { background-color: #4CAF50; color: white; }
-    button.edit { background-color: #2196F3; color: white; }
-    button.delete { background-color: #f44336; color: white; }
-    button.download { background-color: #673AB7; color: white; }
-    button.report { background-color: #FF9800; color: white; }
     .login-form {
       max-width: 400px;
       margin: 50px auto;
       padding: 20px;
       border: 1px solid #ddd;
       border-radius: 10px;
-      background: white;
+      background: var(--white);
       text-align: center;
     }
-    .review-modal {
+    .login-form h2 {
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    input[type="text"], input[type="password"], input[type="email"], select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--secondary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: #FF9800; color: white; }
+    .btn-block {
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+    .text-center {
+      text-align: center;
+    }
+    .mt-20 { margin-top: 20px; }
+    .mb-10 { margin-bottom: 10px; }
+
+    /* Main App */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .card {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      margin-bottom: 15px;
+      color: var(--primary);
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background: var(--primary);
+      color: white;
+    }
+    tr:hover { background: #f9f9f9; }
+
+    /* Modal */
+    .modal {
       display: none;
       position: fixed;
       z-index: 1000;
@@ -66,7 +130,7 @@
       justify-content: center;
       align-items: center;
     }
-    .review-content {
+    .modal-content {
       background: white;
       padding: 20px;
       border-radius: 10px;
@@ -82,84 +146,133 @@
       border-radius: 5px;
       color: #856404;
     }
-    .logout-btn {
-      float: right;
-      background-color: #999;
-    }
   </style>
 </head>
 <body>
 
   <!-- Layar Login -->
   <div id="loginScreen" class="login-form">
-    <h2>Login Karyawan</h2>
+    <h2><i class="fas fa-user-lock"></i> Login</h2>
     <div class="form-group">
       <input type="email" id="loginEmail" placeholder="Email" required>
     </div>
     <div class="form-group">
       <input type="password" id="loginPassword" placeholder="Password" required>
     </div>
-    <button onclick="login()" class="save">Masuk</button>
+    <button class="btn-primary btn-block" onclick="login()">
+      <i class="fas fa-sign-in-alt"></i> Masuk
+    </button>
+    <p class="text-center mt-20">
+      <a href="#" onclick="showSignup()">Belum punya akun? Daftar</a>
+    </p>
+  </div>
+
+  <!-- Layar Daftar -->
+  <div id="signupScreen" class="login-form" style="display:none;">
+    <h2><i class="fas fa-user-plus"></i> Daftar Pengguna</h2>
+    <div class="form-group">
+      <input type="email" id="signupEmail" placeholder="Email" required>
+    </div>
+    <div class="form-group">
+      <input type="password" id="signupPassword" placeholder="Password (min. 6 karakter)" required>
+    </div>
+    <div id="signupMsg"></div>
+    <button class="btn-secondary btn-block" onclick="registerUser()">
+      <i class="fas fa-user-plus"></i> Daftar
+    </button>
+    <p class="text-center mt-20">
+      <a href="#" onclick="showLogin()">Sudah punya akun? Masuk</a>
+    </p>
   </div>
 
   <!-- Aplikasi Utama -->
   <div id="mainApp" style="display:none;">
-    <h2>Database Karyawan</h2>
-    <p><strong>Hai, <span id="userEmail">User</span></strong> | Role: <strong><span id="userRoleDisplay">...</span></strong></p>
-    <button onclick="logout()" class="logout-btn">Keluar</button>
+    <header>
+      <h1><i class="fas fa-building"></i> Karyawan Lampung</h1>
+      <p id="userDisplay">Hai, <span id="userEmail">User</span> | Role: <strong><span id="userRoleDisplay">...</span></strong></p>
+      <button class="btn-warning" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Keluar
+      </button>
+    </header>
 
-    <!-- Form Input -->
-    <div id="form">
-      <div class="form-group"><input type="text" id="nama" placeholder="Nama"></div>
-      <div class="form-group"><input type="text" id="nik" placeholder="Nomor NIK"></div>
-      <div class="form-group"><input type="text" id="alamat" placeholder="Alamat"></div>
-      <div class="form-group"><input type="date" id="mulai"></div>
-      <div class="form-group"><input type="text" id="jabatan" placeholder="Jabatan"></div>
-      <div class="form-group"><input type="text" id="noreg" placeholder="Nomor Registrasi"></div>
+    <div class="card">
+      <h2><i class="fas fa-user-plus"></i> Tambah Karyawan</h2>
       <div class="form-group">
-        <select id="status">
-          <option value="Aktif">Aktif</option>
-          <option value="Non-Aktif">Non-Aktif</option>
+        <label>Nama Lengkap</label>
+        <input type="text" id="nama" placeholder="Nama Lengkap">
+      </div>
+      <div class="form-group">
+        <label>NIK (16 digit)</label>
+        <input type="text" id="nik" placeholder="Nomor Induk Kependudukan" maxlength="16">
+      </div>
+      <div class="form-group">
+        <label>Alamat</label>
+        <select id="alamat">
+          <option value="">Pilih Wilayah Lampung</option>
+          <option value="Bandar Lampung">Bandar Lampung</option>
+          <option value="Metro">Metro</option>
+          <option value="Lampung Selatan">Lampung Selatan</option>
+          <option value="Lampung Tengah">Lampung Tengah</option>
+          <option value="Lampung Utara">Lampung Utara</option>
+          <option value="Lampung Timur">Lampung Timur</option>
+          <option value="Lampung Barat">Lampung Barat</option>
+          <option value="Tulang Bawang">Tulang Bawang</option>
+          <option value="Tulang Bawang Barat">Tulang Bawang Barat</option>
+          <option value="Pesawaran">Pesawaran</option>
+          <option value="Pringsewu">Pringsewu</option>
+          <option value="Mesuji">Mesuji</option>
+          <option value="Pesisir Barat">Pesisir Barat</option>
+          <option value="Way Kanan">Way Kanan</option>
+          <option value="Tanggamus">Tanggamus</option>
         </select>
       </div>
-      <div class="form-group"><input type="text" id="telp" placeholder="Nomor Telepon"></div>
-      <button onclick="showReview()" class="save">Review & Simpan</button>
+      <div class="form-group">
+        <label>Mulai Kerja</label>
+        <input type="date" id="mulai">
+      </div>
+      <div class="form-group">
+        <label>Jabatan</label>
+        <input type="text" id="jabatan" placeholder="Jabatan">
+      </div>
+      <button class="btn-primary btn-block mt-20" onclick="showReview()">
+        <i class="fas fa-check-circle"></i> Review & Simpan
+      </button>
     </div>
 
     <!-- Tabel -->
-    <table id="karyawanTable">
-      <thead>
-        <tr>
-          <th>Nama</th>
-          <th>NIK</th>
-          <th>Alamat</th>
-          <th>Mulai Masuk</th>
-          <th>Jabatan</th>
-          <th>No. Registrasi</th>
-          <th>Status</th>
-          <th>No. Telepon</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <!-- Tombol Download -->
-    <div style="margin-top: 20px;">
-      <button class="download" onclick="downloadPDF()">Download PDF</button>
-      <button class="download" onclick="downloadExcel()">Download Excel</button>
+    <div class="card">
+      <h2>Data Karyawan</h2>
+      <table id="karyawanTable">
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>NIK</th>
+            <th>Alamat</th>
+            <th>Mulai</th>
+            <th>Jabatan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 
   <!-- Modal Review -->
-  <div id="reviewModal" class="review-modal">
-    <div class="review-content">
-      <h3>🔍 Review Data Karyawan</h3>
+  <div id="reviewModal" class="modal">
+    <div class="modal-content">
+      <h3><i class="fas fa-eye"></i> Review Data</h3>
       <div id="reviewData"></div>
       <p>Apakah data sudah benar?</p>
-      <button onclick="saveData()">✅ Ya, Simpan</button>
-      <button onclick="reportError()" class="report">📢 Tidak, Lapor ke Admin</button>
-      <button onclick="closeReview()" style="background:#999;">Batal</button>
+      <button class="btn-primary" onclick="saveData()">
+        <i class="fas fa-save"></i> Ya, Simpan
+      </button>
+      <button class="btn-warning" onclick="reportError()">
+        <i class="fas fa-flag"></i> Tidak, Lapor ke Admin
+      </button>
+      <button class="btn-danger" onclick="closeReview()">
+        <i class="fas fa-times"></i> Batal
+      </button>
     </div>
   </div>
 
@@ -167,8 +280,8 @@
   <script type="module">
     // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // ============= GANTI INI DENGAN KONFIGURASI ANDA =============
     const firebaseConfig = {
@@ -181,7 +294,6 @@
     };
     // ============================================================
 
-    // Inisialisasi Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getFirestore();
@@ -224,6 +336,44 @@
       }
     };
 
+    // Daftar Pengguna
+    window.registerUser = async function() {
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const message = document.getElementById('signupMsg');
+      message.innerHTML = '';
+
+      if (!email || !password) {
+        message.innerHTML = '<div class="error">Email dan password wajib diisi</div>';
+        return;
+      }
+
+      if (password.length < 6) {
+        message.innerHTML = '<div class="error">Password minimal 6 karakter</div>';
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        alert('Pendaftaran berhasil! Silakan login.');
+        showLogin();
+      } catch (error) {
+        message.innerHTML = `<div class="error">${error.message}</div>`;
+      }
+    };
+
+    // Tampilkan Layar Daftar
+    window.showSignup = function() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('signupScreen').style.display = 'block';
+    };
+
+    // Tampilkan Layar Login
+    window.showLogin = function() {
+      document.getElementById('signupScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+    };
+
     // Logout
     window.logout = async function() {
       await signOut(auth);
@@ -243,10 +393,7 @@
         nama, nik,
         alamat: document.getElementById('alamat').value,
         mulai: document.getElementById('mulai').value,
-        jabatan: document.getElementById('jabatan').value,
-        noreg: document.getElementById('noreg').value,
-        status: document.getElementById('status').value,
-        telp: document.getElementById('telp').value
+        jabatan: document.getElementById('jabatan').value
       };
 
       const reviewDiv = document.getElementById('reviewData');
@@ -256,22 +403,14 @@
         <p><strong>Alamat:</strong> ${pendingData.alamat || '-'}</p>
         <p><strong>Mulai:</strong> ${pendingData.mulai || '-'}</p>
         <p><strong>Jabatan:</strong> ${pendingData.jabatan || '-'}</p>
-        <p><strong>No. Reg:</strong> ${pendingData.noreg || '-'}</p>
-        <p><strong>Status:</strong> ${pendingData.status}</p>
-        <p><strong>Telepon:</strong> ${pendingData.telp || '-'}</p>
       `;
 
       document.getElementById('reviewModal').style.display = 'flex';
     };
 
-    // Simpan Data ke Firestore
+    // Simpan Data
     window.saveData = async function() {
-      if (editingItemId) {
-        await updateDoc(doc(db, 'karyawan', editingItemId), pendingData);
-        editingItemId = null;
-      } else {
-        await addDoc(collection(db, 'karyawan'), pendingData);
-      }
+      await addDoc(collection(db, 'karyawan'), pendingData);
       closeReview();
       clearForm();
       loadKaryawan();
@@ -280,12 +419,10 @@
     // Lapor ke Admin
     window.reportError = function() {
       const data = pendingData;
-      const reportMsg = `🚨 Laporan dari Operator:\n` +
-        `Nama: ${data.nama}\nNIK: ${data.nik}\n` +
-        `Kesalahan: Data tidak sesuai.\n` +
+      const report = `Operator melaporkan kesalahan:\n\n` +
+        `Nama: ${data.nama}\nNIK: ${data.nik}\n\n` +
         `Mohon Admin periksa dan perbaiki.`;
-
-      alert(reportMsg);
+      alert(report);
       closeReview();
       clearForm();
     };
@@ -295,7 +432,7 @@
       document.getElementById('reviewModal').style.display = 'none';
     };
 
-    // Muat Data dari Firestore
+    // Muat Data
     async function loadKaryawan() {
       const querySnapshot = await getDocs(collection(db, 'karyawan'));
       const table = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
@@ -309,36 +446,17 @@
           <td>${data.alamat}</td>
           <td>${data.mulai}</td>
           <td>${data.jabatan}</td>
-          <td>${data.noreg}</td>
-          <td>${data.status}</td>
-          <td>${data.telp}</td>
           <td>
             ${userRole === 'Admin' 
-              ? `<button class="edit" onclick="editItem('${doc.id}')">Edit</button>
-                 <button class="delete" onclick="deleteItem('${doc.id}')">Hapus</button>`
-              : `<button class="report" onclick="quickReport('${data.nama}', '${data.nik}')">Lapor</button>`
+              ? `<button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
+              : `<button class="btn-warning" onclick="quickReport('${data.nama}', '${data.nik}')"><i class="fas fa-flag"></i> Lapor</button>`
             }
           </td>
         `;
       });
     }
 
-    // Edit Item
-    window.editItem = function(id) {
-      editingItemId = id;
-      const row = event.target.parentNode.parentNode;
-      const cells = row.getElementsByTagName('td');
-      document.getElementById('nama').value = cells[0].innerText;
-      document.getElementById('nik').value = cells[1].innerText;
-      document.getElementById('alamat').value = cells[2].innerText;
-      document.getElementById('mulai').value = cells[3].innerText;
-      document.getElementById('jabatan').value = cells[4].innerText;
-      document.getElementById('noreg').value = cells[5].innerText;
-      document.getElementById('status').value = cells[6].innerText;
-      document.getElementById('telp').value = cells[7].innerText;
-    };
-
-    // Hapus Item
+    // Hapus Data
     window.deleteItem = async function(id) {
       if (confirm('Hapus data ini?')) {
         await deleteDoc(doc(db, 'karyawan', id));
@@ -346,9 +464,9 @@
       }
     };
 
-    // Lapor Cepat dari Tabel
+    // Lapor Cepat
     window.quickReport = function(nama, nik) {
-      alert(`Operator melaporkan \nNama: ${nama}\nNIK: ${nik}\n\nMohon Admin periksa dan perbaiki.`);
+      alert(`Operator melaporkan:\nNama: ${nama}\nNIK: ${nik}\n\nMohon Admin periksa.`);
     };
 
     // Clear Form
@@ -358,9 +476,6 @@
       document.getElementById('alamat').value = '';
       document.getElementById('mulai').value = '';
       document.getElementById('jabatan').value = '';
-      document.getElementById('noreg').value = '';
-      document.getElementById('status').value = 'Aktif';
-      document.getElementById('telp').value = '';
     }
 
     // Cek Auth State
@@ -369,46 +484,6 @@
         // Sudah ditangani di login
       }
     });
-
-    // Ekspor PDF
-    function downloadPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text("Data Karyawan", 10, 10);
-      const headers = [["Nama", "NIK", "Alamat", "Mulai", "Jabatan", "No. Reg", "Status", "Telp"]];
-      const data = Array.from(document.querySelectorAll("#karyawanTable tbody tr")).map(tr => [
-        tr.cells[0].innerText,
-        tr.cells[1].innerText,
-        tr.cells[2].innerText,
-        tr.cells[3].innerText,
-        tr.cells[4].innerText,
-        tr.cells[5].innerText,
-        tr.cells[6].innerText,
-        tr.cells[7].innerText
-      ]);
-      doc.autoTable({ head: headers, body: data, startY: 20 });
-      doc.save("karyawan.pdf");
-    }
-
-    // Ekspor Excel
-    function downloadExcel() {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["Nama", "NIK", "Alamat", "Mulai", "Jabatan", "No. Reg", "Status", "Telp"],
-        ...Array.from(document.querySelectorAll("#karyawanTable tbody tr")).map(tr => [
-          tr.cells[0].innerText,
-          tr.cells[1].innerText,
-          tr.cells[2].innerText,
-          tr.cells[3].innerText,
-          tr.cells[4].innerText,
-          tr.cells[5].innerText,
-          tr.cells[6].innerText,
-          tr.cells[7].innerText
-        ])
-      ]);
-      XLSX.utils.book_append_sheet(wb, ws, "Karyawan");
-      XLSX.writeFile(wb, "karyawan.xlsx");
-    }
   </script>
 </body>
 </html>
