@@ -137,6 +137,14 @@
       max-width: 500px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
+    .error-log {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      color: #856404;
+    }
   </style>
 </head>
 <body>
@@ -447,7 +455,11 @@
     window.saveData = async function() {
       // Upload dokumen
       const files = {
-        ktp: document.getElementById('ktpFile').files[0],
+        <div class="form-group">
+  <label>KTP (Link Google Drive)</label>
+  <input type="text" id="ktpLink" placeholder="https://drive.google.com/...">
+</div>
+<!-- Ulangi untuk KK, Ijazah, dll -->        ktp: document.getElementById('ktpFile').files[0],
         kk: document.getElementById('kkFile').files[0],
         ijazah: document.getElementById('ijazahFile').files[0],
         kontrak: document.getElementById('kontrakFile').files[0],
