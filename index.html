@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Database Karyawan</title>
+  <title>Karyawan Lampung</title>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
@@ -306,10 +306,10 @@
     const auth = getAuth();
     const db = getFirestore();
 
-    // ============= KONFIGURASI CLOUDINARY =============
+    // ============= KONFIGURASI CLOUDINARY (WAJIB DIISI) =============
     const CLOUD_NAME = "dnnetoodz";     // Ganti dengan Cloud Name Anda
     const UPLOAD_PRESET = "karyawan_docs";    // Ganti dengan Upload Preset Anda
-    // =================================================
+    // ================================================================
 
     let currentUser = null;
     let userRole = 'Operator';
@@ -446,7 +446,7 @@
       document.getElementById('reviewModal').style.display = 'flex';
     };
 
-    // Upload ke Cloudinary & Simpan ke Firestore
+    // Upload ke Cloudinary & Simpan
     window.saveData = async function() {
       const dokumenURL = {};
 
