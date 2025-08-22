@@ -234,7 +234,7 @@
     // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // ============= GANTI INI DENGAN KONFIGURASI ANDA =============
     const firebaseConfig = {
@@ -253,6 +253,7 @@
 
     let currentUser = null;
     let userRole = 'Operator';
+    let editingItemId = null;
 
     // Login
     window.login = async function() {
@@ -367,13 +368,26 @@
           <td>${data.jabatan}</td>
           <td>
             ${userRole === 'Admin' 
-              ? `<button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
+              ? `<button class="btn-secondary" onclick="editItem('${doc.id}')"><i class="fas fa-edit"></i> Edit</button>
+                 <button class="btn-danger" onclick="deleteItem('${doc.id}')"><i class="fas fa-trash"></i> Hapus</button>`
               : `<button class="btn-warning" onclick="quickReport('${data.nama}', '${data.nik}')"><i class="fas fa-flag"></i> Lapor</button>`
             }
           </td>
         `;
       });
     }
+
+    // Edit Item
+    window.editItem = function(id) {
+      editingItemId = id;
+      const row = event.target.parentNode.parentNode;
+      const cells = row.getElementsByTagName('td');
+      document.getElementById('nama').value = cells[0].innerText;
+      document.getElementById('nik').value = cells[1].innerText;
+      document.getElementById('alamat').value = cells[2].innerText;
+      document.getElementById('mulai').value = cells[3].innerText;
+      document.getElementById('jabatan').value = cells[4].innerText;
+    };
 
     // Hapus Data
     window.deleteItem = async function(id) {
