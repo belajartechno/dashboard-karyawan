@@ -137,14 +137,6 @@
       max-width: 500px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
-    .error-log {
-      background-color: #fff3cd;
-      border: 1px solid #ffeaa7;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-      color: #856404;
-    }
   </style>
 </head>
 <body>
@@ -234,9 +226,9 @@
         <input type="text" id="jabatan" placeholder="Jabatan">
       </div>
 
-      <!-- Upload Dokumen -->
+      <!-- Upload Dokumen ke Cloudinary -->
       <div class="form-group">
-        <label>Upload Dokumen</label>
+        <label>Upload Dokumen (Cloudinary)</label>
         <input type="file" id="ktpFile" accept="image/*,.pdf">
         <small>KTP</small><br>
         <input type="file" id="kkFile" accept="image/*,.pdf">
@@ -292,13 +284,12 @@
     </div>
   </div>
 
-  <!-- Firebase Libraries -->
+  <!-- Firebase & Cloudinary Libraries -->
   <script type="module">
     // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     // ============= GANTI INI DENGAN KONFIGURASI ANDA =============
     const firebaseConfig = {
@@ -314,7 +305,10 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getFirestore();
-    const storage = getStorage();
+
+    // Konfigurasi Cloudinary
+    const CLOUD_NAME = "dnnetoodz";     // Ganti dengan Cloud Name Anda
+    const UPLOAD_PRESET = "karyawan_docs";    // Ganti dengan Upload Preset Anda
 
     let currentUser = null;
     let userRole = 'Operator';
@@ -451,32 +445,40 @@
       document.getElementById('reviewModal').style.display = 'flex';
     };
 
-    // Simpan Data
+    // Upload ke Cloudinary & Simpan
     window.saveData = async function() {
-      // Upload dokumen
-      const files = {
-        <div class="form-group">
-  <label>KTP (Link Google Drive)</label>
-  <input type="text" id="ktpLink" placeholder="https://drive.google.com/...">
-</div>
-<!-- Ulangi untuk KK, Ijazah, dll -->        ktp: document.getElementById('ktpFile').files[0],
-        kk: document.getElementById('kkFile').files[0],
-        ijazah: document.getElementById('ijazahFile').files[0],
-        kontrak: document.getElementById('kontrakFile').files[0],
-        lainnya: document.getElementById('lainnyaFile').files[0]
-      };
-
       const dokumenURL = {};
-      for (const [key, file] of Object.entries(files)) {
+
+      const files = [
+        { id: "ktpFile", key: "ktp" },
+        { id: "kkFile", key: "kk" },
+        { id: "ijazahFile", key: "ijazah" },
+        { id: "kontrakFile", key: "kontrak" },
+        { id: "lainnyaFile", key: "lainnya" }
+      ];
+
+      for (const fileData of files) {
+        const fileInput = document.getElementById(fileData.id);
+        const file = fileInput.files[0];
         if (file) {
-          const filePath = `karyawan/${currentUser.uid}/${Date.now()}_${key}`;
-          const fileRef = ref(storage, filePath);
-          await uploadBytes(fileRef, file);
-          dokumenURL[key] = await getDownloadURL(fileRef);
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("upload_preset", UPLOAD_PRESET);
+
+          try {
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
+              method: "POST",
+              body: formData
+            });
+            const result = await response.json();
+            dokumenURL[fileData.key] = result.secure_url;
+          } catch (error) {
+            alert(`Gagal upload ${fileData.key}: ${error.message}`);
+          }
         }
       }
 
-      // Simpan data ke Firestore
+      // Simpan ke Firestore
       await addDoc(collection(db, 'karyawan'), {
         ...pendingData,
         dokumen: dokumenURL,
