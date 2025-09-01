@@ -336,10 +336,10 @@
       location.reload();
     }
 
-    // Simpan data ke localStorage & file JSON
+    // ✅ SIMPAN DATA KE localStorage SAJA (TANPA LANGSUNG DOWNLOAD)
     function simpanData(data) {
       localStorage.setItem('karyawanData', JSON.stringify(data));
-      unduhJSON(data);
+      allData = data; // Update variabel global
     }
 
     function unduhJSON(data) {
