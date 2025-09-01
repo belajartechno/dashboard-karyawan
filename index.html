@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Karyawan</title>
+  <title>Admin Karyawan - Offline</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --primary: #4CAF50;
@@ -59,6 +61,7 @@
     .btn-danger { background: var(--danger); color: white; }
     .btn-warning { background: var(--warning); color: white; }
     .btn-block { display: block; width: 100%; text-align: center; }
+    .btn-sm { padding: 8px 12px; font-size: 0.9rem; }
     .text-center { text-align: center; }
     .mt-10 { margin-top: 10px; }
     .mt-20 { margin-top: 20px; }
@@ -86,7 +89,7 @@
       margin-bottom: 5px;
       font-weight: 500;
     }
-    .photo-preview {
+    .photo-preview, .dokumen-preview {
       width: 100px;
       height: 100px;
       border: 2px dashed #ddd;
@@ -95,6 +98,10 @@
       background-size: cover;
       background-position: center;
       background-color: #f7f7f7;
+    }
+    .dokumen-preview {
+      background-size: contain;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z'/%3E%3C/svg%3E");
     }
     table {
       width: 100%;
@@ -116,6 +123,13 @@
       display: flex;
       gap: 8px;
       justify-content: center;
+    }
+    .qrcode-container {
+      display: inline-block;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: white;
     }
     .search-box {
       width: 100%;
@@ -154,7 +168,7 @@
   <!-- Layar Login -->
   <div id="loginScreen" class="login-form">
     <h2><i class="fas fa-user-shield"></i> Login Admin</h2>
-    <p>Masuk Ke Sistem Dulu Bro</p>
+    <p>Masuk ke sistem (Offline)</p>
     <input type="text" id="username" placeholder="Username" value="admin">
     <input type="password" id="password" placeholder="Password" value="password123">
     <button class="btn-primary btn-block" onclick="login()">
@@ -224,6 +238,12 @@
         </select>
       </div>
       <div class="form-group">
+        <label>Upload Dokumen Kontrak Kerja</label>
+        <input type="file" id="dokumenKontrak" accept=".pdf,.doc,.docx">
+        <div class="dokumen-preview" id="dokumenPreview"></div>
+        <div id="fileName"></div>
+      </div>
+      <div class="form-group">
         <label>Jabatan</label>
         <select id="jabatan">
           <option value="">Pilih Jabatan</option>
@@ -255,10 +275,18 @@
       </button>
     </div>
 
-    <!-- Pencarian -->
+    <!-- Pencarian & Ekspor -->
     <div class="card">
-      <h2><i class="fas fa-search"></i> Cari Karyawan</h2>
+      <h2><i class="fas fa-search"></i> Cari & Ekspor Data</h2>
       <input type="text" id="searchInput" class="search-box" placeholder="Cari berdasarkan nama, NIK, jabatan, dll..." onkeyup="searchKaryawan()">
+      <div style="text-align:right;">
+        <button class="btn-secondary btn-sm" onclick="cetakData()">
+          <i class="fas fa-print"></i> Cetak (PDF)
+        </button>
+        <button class="btn-primary btn-sm" onclick="exportToExcel()">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+      </div>
     </div>
 
     <!-- Tabel Data -->
@@ -276,6 +304,8 @@
             <th>Kontrak</th>
             <th>Jabatan</th>
             <th>Status</th>
+            <th>QR</th>
+            <th>Dokumen</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -355,7 +385,32 @@
       allData = JSON.parse(localStorage.getItem('karyawanData')) || [];
       allData.forEach((item, index) => {
         const row = tbody.insertRow();
-        row.innerHTML = `
+        const qrCell = row.insertCell();
+        const qrDiv = document.createElement('div');
+        qrDiv.className = 'qrcode-container';
+        qrDiv.style.width = '80px';
+        qrDiv.style.height = '80px';
+        qrCell.appendChild(qrDiv);
+        new QRCode(qrDiv, {
+          text: JSON.stringify({
+            nama: item.nama,
+            nik: item.nik,
+            jabatan: item.jabatan,
+            status: item.status,
+            alamat: item.alamat
+          }),
+          width: 80,
+          height: 80
+        });
+
+        const dokumenCell = row.insertCell();
+        if (item.dokumen) {
+          dokumenCell.innerHTML = `<a href="${item.dokumen}" download="kontrak-${item.nik}.pdf" style="color:#2196F3;">📥 Unduh</a>`;
+        } else {
+          dokumenCell.textContent = '-';
+        }
+
+        row.innerHTML = row.innerHTML.replace('</td><td>', `
           <td><img src="${item.foto || 'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%; object-fit:cover;"></td>
           <td>${item.nama}</td>
           <td>${item.nik}</td>
@@ -369,11 +424,11 @@
             item.status === 'Resign' ? '#f44336' :
             item.status === 'Non Aktif' ? '#FF9800' : '#999'
           }; color:white; font-size:0.8rem;">${item.status}</span></td>
-          <td class="action-buttons">
-            <button onclick="editKaryawan(${index})"><i class="fas fa-edit"></i> Edit</button>
-            <button onclick="hapusKaryawan(${index})"><i class="fas fa-trash"></i> Hapus</button>
-          </td>
-        `;
+        `) + `<td>${dokumenCell.outerHTML}</td>
+        <td class="action-buttons">
+          <button onclick="editKaryawan(${index})"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="hapusKaryawan(${index})"><i class="fas fa-trash"></i> Hapus</button>
+        </td>`;
       });
       renderChart();
     }
@@ -395,6 +450,19 @@
       }
     }
 
+    // Preview dokumen
+    document.getElementById('dokumenKontrak').onchange = function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('dokumen').value = e.target.result;
+          document.getElementById('fileName').innerHTML = `<small>File: ${file.name}</small>`;
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
     // Simpan/Edit
     function simpanKaryawan() {
       const nama = getVal('nama');
@@ -407,45 +475,63 @@
       const status = getVal('status');
       const editId = document.getElementById('editId').value;
       const fotoInput = document.getElementById('foto');
+      const dokumenInput = document.getElementById('dokumenKontrak');
+
       let fotoURL = '';
+      let dokumenURL = document.getElementById('dokumen')?.value || '';
 
       if (!nama || !nik || nik.length !== 16 || !status) {
         alert("Nama, NIK (16 digit), dan Status wajib diisi.");
         return;
       }
 
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+
+      // Upload foto
       if (fotoInput.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
           fotoURL = e.target.result;
-          simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId);
+          lanjutSimpan();
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
         fotoURL = editId !== "" ? data[editId].foto : '';
-        simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId);
+        lanjutSimpan();
+      }
+
+      function lanjutSimpan() {
+        // Upload dokumen
+        if (dokumenInput.files[0] && !dokumenURL) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            dokumenURL = e.target.result;
+            simpanKeData();
+          };
+          reader.readAsDataURL(dokumenInput.files[0]);
+        } else {
+          simpanKeData();
+        }
+      }
+
+      function simpanKeData() {
+        const item = { nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, foto: fotoURL, dokumen: dokumenURL };
+
+        if (editId !== "") {
+          data[editId] = item;
+          showToast("Data diperbarui.");
+        } else {
+          data.push(item);
+          showToast("Karyawan ditambahkan.");
+        }
+
+        simpanData(data);
+        clearForm();
+        muatData();
       }
     }
 
     function getVal(id) { return document.getElementById(id).value.trim(); }
-
-    function simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId) {
-      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
-      const item = { nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, foto: fotoURL };
-
-      if (editId !== "") {
-        data[editId] = item;
-        showToast("Data diperbarui.");
-      } else {
-        data.push(item);
-        showToast("Karyawan ditambahkan.");
-      }
-
-      simpanData(data);
-      clearForm();
-      muatData();
-    }
 
     // Edit
     function editKaryawan(index) {
@@ -461,10 +547,12 @@
       setVal('jabatan', item.jabatan);
       setVal('status', item.status);
       document.getElementById('photoPreview').style.backgroundImage = item.foto ? `url(${item.foto})` : '';
+      document.getElementById('dokumen').value = item.dokumen || '';
+      document.getElementById('fileName').innerHTML = item.dokumen ? '<small>File kontrak sudah ada</small>' : '';
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Karyawan';
     }
 
-    function setVal(id, val) { document.getElementById(id).value = val; }
+    function setVal(id, val) { if (document.getElementById(id)) document.getElementById(id).value = val; }
 
     // Hapus
     function hapusKaryawan(index) {
@@ -500,7 +588,26 @@
       tbody.innerHTML = '';
       data.forEach((item, index) => {
         const row = tbody.insertRow();
-        row.innerHTML = `
+        const qrDiv = document.createElement('div');
+        qrDiv.className = 'qrcode-container';
+        qrDiv.style.width = '80px';
+        qrDiv.style.height = '80px';
+        new QRCode(qrDiv, {
+          text: JSON.stringify({ nama: item.nama, nik: item.nik, jabatan: item.jabatan }),
+          width: 80,
+          height: 80
+        });
+        const qrCell = row.insertCell();
+        qrCell.appendChild(qrDiv);
+
+        const dokumenCell = row.insertCell();
+        if (item.dokumen) {
+          dokumenCell.innerHTML = `<a href="${item.dokumen}" download style="color:#2196F3;">📥</a>`;
+        } else {
+          dokumenCell.textContent = '-';
+        }
+
+        row.innerHTML = row.innerHTML.replace('</td><td>', `
           <td><img src="${item.foto || 'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%; object-fit:cover;"></td>
           <td>${item.nama}</td>
           <td>${item.nik}</td>
@@ -512,11 +619,11 @@
           <td><span style="padding:4px 8px; border-radius:4px; background:${
             item.status === 'Aktif' ? '#4CAF50' : '#f44336'
           }; color:white; font-size:0.8rem;">${item.status}</span></td>
-          <td class="action-buttons">
-            <button onclick="editKaryawan(${index})"><i class="fas fa-edit"></i> Edit</button>
-            <button onclick="hapusKaryawan(${index})"><i class="fas fa-trash"></i> Hapus</button>
-          </td>
-        `;
+        `) + `<td>${dokumenCell.outerHTML}</td>
+        <td class="action-buttons">
+          <button onclick="editKaryawan(${index})"><i class="fas fa-edit"></i> Edit</button>
+          <button onclick="hapusKaryawan(${index})"><i class="fas fa-trash"></i> Hapus</button>
+        </td>`;
       });
     }
 
@@ -525,41 +632,23 @@
     function renderChart() {
       const ctx = document.getElementById('statsChart').getContext('2d');
       if (chart) chart.destroy();
-
       const wilayah = {}, pendidikan = {}, jabatan = {};
       allData.forEach(item => {
         wilayah[item.alamat] = (wilayah[item.alamat] || 0) + 1;
         pendidikan[item.pendidikan] = (pendidikan[item.pendidikan] || 0) + 1;
         jabatan[item.jabatan] = (jabatan[item.jabatan] || 0) + 1;
       });
-
       chart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: Object.keys(wilayah),
           datasets: [
-            {
-              label: 'Jumlah per Wilayah',
-              data: Object.values(wilayah),
-              backgroundColor: '#4CAF50'
-            },
-            {
-              label: 'Pendidikan',
-              data: Object.values(pendidikan),
-              backgroundColor: '#2196F3'
-            },
-            {
-              label: 'Jabatan',
-              data: Object.values(jabatan),
-              backgroundColor: '#FF9800'
-            }
+            { label: 'Wilayah', data: Object.values(wilayah), backgroundColor: '#4CAF50' },
+            { label: 'Pendidikan', data: Object.values(pendidikan), backgroundColor: '#2196F3' },
+            { label: 'Jabatan', data: Object.values(jabatan), backgroundColor: '#FF9800' }
           ]
         },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-          plugins: { legend: { position: 'top' } }
-        }
+        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
       });
     }
 
@@ -568,6 +657,8 @@
       document.getElementById('editId').value = '';
       document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(inp => inp.value = '');
       document.getElementById('photoPreview').style.backgroundImage = '';
+      document.getElementById('dokumenPreview').style.backgroundImage = '';
+      document.getElementById('fileName').innerHTML = '';
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-plus"></i> Tambah Karyawan';
     }
 
@@ -578,6 +669,81 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
+
+    // Cetak (PDF)
+    function cetakData() {
+      const printWindow = window.open('', '_blank');
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+      let rows = '';
+      data.forEach(item => {
+        rows += `
+          <tr>
+            <td><img src="${item.foto || 'https://via.placeholder.com/40'}" width="30" style="border-radius:50%"></td>
+            <td>${item.nama}</td>
+            <td>${item.nik}</td>
+            <td>${item.alamat}</td>
+            <td>${formatTanggal(item.mulai)}</td>
+            <td>${item.pendidikan}</td>
+            <td>${item.kontrak} Tahun</td>
+            <td>${item.jabatan}</td>
+            <td>${item.status}</td>
+          </tr>`;
+      });
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Cetak Data Karyawan</title>
+          <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+            th { background: #4CAF50; color: white; }
+            img { vertical-align: middle; }
+          </style>
+        </head>
+        <body>
+          <h2>Data Karyawan - Karyawan Lampung</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Nama</th>
+                <th>NIK</th>
+                <th>Alamat</th>
+                <th>Mulai</th>
+                <th>Pendidikan</th>
+                <th>Kontrak</th>
+                <th>Jabatan</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    // Export ke Excel
+    function exportToExcel() {
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+      const exportData = data.map(item => ({
+        'Nama': item.nama,
+        'NIK': item.nik,
+        'Alamat': item.alamat,
+        'Mulai Kerja': formatTanggal(item.mulai),
+        'Pendidikan': item.pendidikan,
+        'Kontrak (Tahun)': item.kontrak,
+        'Jabatan': item.jabatan,
+        'Status': item.status
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Karyawan");
+      XLSX.writeFile(wb, `Data-Karyawan-${new Date().toLocaleDateString('id-ID')}.xlsx`);
+    }
   </script>
+  <input type="hidden" id="dokumen">
 </body>
 </html>
