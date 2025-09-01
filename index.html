@@ -100,7 +100,6 @@
       background-color: #f7f7f7;
     }
     .dokumen-preview {
-      background-size: contain;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z'/%3E%3C/svg%3E");
     }
     table {
@@ -322,8 +321,11 @@
     </div>
   </div>
 
+  <!-- Hidden input untuk simpan dokumen -->
+  <input type="hidden" id="dokumen">
+
   <script>
-    // Username & password default
+    // Username & password admin
     const ADMIN_USER = "admin";
     const ADMIN_PASS = "password123";
 
@@ -377,14 +379,17 @@
       showToast("Data disimpan ke file JSON!");
     }
 
-    // Muat data
+    // Muat data dari localStorage
     let allData = [];
     function muatData() {
       const tbody = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
       tbody.innerHTML = '';
       allData = JSON.parse(localStorage.getItem('karyawanData')) || [];
+
       allData.forEach((item, index) => {
         const row = tbody.insertRow();
+
+        // QR Code
         const qrCell = row.insertCell();
         const qrDiv = document.createElement('div');
         qrDiv.className = 'qrcode-container';
@@ -396,13 +401,13 @@
             nama: item.nama,
             nik: item.nik,
             jabatan: item.jabatan,
-            status: item.status,
-            alamat: item.alamat
+            status: item.status
           }),
           width: 80,
           height: 80
         });
 
+        // Dokumen
         const dokumenCell = row.insertCell();
         if (item.dokumen) {
           dokumenCell.innerHTML = `<a href="${item.dokumen}" download="kontrak-${item.nik}.pdf" style="color:#2196F3;">📥 Unduh</a>`;
@@ -410,6 +415,7 @@
           dokumenCell.textContent = '-';
         }
 
+        // Sisanya
         row.innerHTML = row.innerHTML.replace('</td><td>', `
           <td><img src="${item.foto || 'https://via.placeholder.com/40'}" width="40" height="40" style="border-radius:50%; object-fit:cover;"></td>
           <td>${item.nama}</td>
@@ -430,7 +436,8 @@
           <button onclick="hapusKaryawan(${index})"><i class="fas fa-trash"></i> Hapus</button>
         </td>`;
       });
-      renderChart();
+
+      renderChart(); // Render grafik setelah muat data
     }
 
     // Format tanggal
@@ -463,7 +470,7 @@
       }
     };
 
-    // Simpan/Edit
+    // Simpan/Edit Karyawan
     function simpanKaryawan() {
       const nama = getVal('nama');
       const nik = getVal('nik');
@@ -478,7 +485,7 @@
       const dokumenInput = document.getElementById('dokumenKontrak');
 
       let fotoURL = '';
-      let dokumenURL = document.getElementById('dokumen')?.value || '';
+      let dokumenURL = document.getElementById('dokumen').value;
 
       if (!nama || !nik || nik.length !== 16 || !status) {
         alert("Nama, NIK (16 digit), dan Status wajib diisi.");
@@ -527,13 +534,13 @@
 
         simpanData(data);
         clearForm();
-        muatData();
+        muatData(); // Refresh data dan grafik
       }
     }
 
     function getVal(id) { return document.getElementById(id).value.trim(); }
 
-    // Edit
+    // Edit Karyawan
     function editKaryawan(index) {
       const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
       const item = data[index];
@@ -546,15 +553,20 @@
       setVal('kontrak', item.kontrak);
       setVal('jabatan', item.jabatan);
       setVal('status', item.status);
+
+      // Foto
       document.getElementById('photoPreview').style.backgroundImage = item.foto ? `url(${item.foto})` : '';
+
+      // Dokumen
       document.getElementById('dokumen').value = item.dokumen || '';
       document.getElementById('fileName').innerHTML = item.dokumen ? '<small>File kontrak sudah ada</small>' : '';
+
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Karyawan';
     }
 
     function setVal(id, val) { if (document.getElementById(id)) document.getElementById(id).value = val; }
 
-    // Hapus
+    // Hapus Karyawan
     function hapusKaryawan(index) {
       if (confirm("Hapus karyawan ini?")) {
         const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
@@ -588,6 +600,7 @@
       tbody.innerHTML = '';
       data.forEach((item, index) => {
         const row = tbody.insertRow();
+
         const qrDiv = document.createElement('div');
         qrDiv.className = 'qrcode-container';
         qrDiv.style.width = '80px';
@@ -627,17 +640,19 @@
       });
     }
 
-    // Grafik
+    // Grafik Statistik
     let chart = null;
     function renderChart() {
       const ctx = document.getElementById('statsChart').getContext('2d');
       if (chart) chart.destroy();
+
       const wilayah = {}, pendidikan = {}, jabatan = {};
       allData.forEach(item => {
         wilayah[item.alamat] = (wilayah[item.alamat] || 0) + 1;
         pendidikan[item.pendidikan] = (pendidikan[item.pendidikan] || 0) + 1;
         jabatan[item.jabatan] = (jabatan[item.jabatan] || 0) + 1;
       });
+
       chart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -648,7 +663,16 @@
             { label: 'Jabatan', data: Object.values(jabatan), backgroundColor: '#FF9800' }
           ]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          },
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Statistik Karyawan' }
+          }
+        }
       });
     }
 
@@ -657,7 +681,7 @@
       document.getElementById('editId').value = '';
       document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(inp => inp.value = '');
       document.getElementById('photoPreview').style.backgroundImage = '';
-      document.getElementById('dokumenPreview').style.backgroundImage = '';
+      document.getElementById('dokumen').value = '';
       document.getElementById('fileName').innerHTML = '';
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-plus"></i> Tambah Karyawan';
     }
@@ -744,6 +768,5 @@
       XLSX.writeFile(wb, `Data-Karyawan-${new Date().toLocaleDateString('id-ID')}.xlsx`);
     }
   </script>
-  <input type="hidden" id="dokumen">
 </body>
 </html>
