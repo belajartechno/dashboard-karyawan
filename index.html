@@ -585,12 +585,115 @@
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-plus"></i> Tambah Karyawan';
     }
 
-    // Notifikasi
+        // Notifikasi
     function showToast(msg) {
       const toast = document.getElementById('toast');
       toast.textContent = msg;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Cetak (PDF)
+    function cetakData() {
+      const printWindow = window.open('', '_blank');
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+      if (data.length === 0) {
+        alert("Belum ada data untuk dicetak.");
+        return;
+      }
+      let rows = '';
+      data.forEach(item => {
+        rows += `
+          <tr>
+            <td><img src="${item.foto || 'https://via.placeholder.com/40'}" width="30" style="border-radius:50%"></td>
+            <td>${item.nama}</td>
+            <td>${item.nik}</td>
+            <td>${item.alamat}</td>
+            <td>${formatTanggal(item.mulai)}</td>
+            <td>${item.pendidikan}</td>
+            <td>${item.kontrak} Tahun</td>
+            <td>${item.jabatan}</td>
+            <td>${item.status}</td>
+          </tr>`;
+      });
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Cetak Data Karyawan</title>
+          <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+            th { background: #4CAF50; color: white; }
+            img { vertical-align: middle; }
+            @media print {
+              body { margin: 1cm; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h2>Data Karyawan - Karyawan Lampung</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Foto</th>
+                <th>Nama</th>
+                <th>NIK</th>
+                <th>Alamat</th>
+                <th>Mulai</th>
+                <th>Pendidikan</th>
+                <th>Kontrak</th>
+                <th>Jabatan</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <script>
+            setTimeout(() => window.print(), 500);
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
+    // Export ke Excel (sebagai CSV)
+    function exportToExcel() {
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+      if (data.length === 0) {
+        alert("Belum ada data untuk diekspor.");
+        return;
+      }
+
+      // Header CSV
+      const headers = ['Nama', 'NIK', 'Alamat', 'Mulai Kerja', 'Pendidikan', 'Kontrak (Tahun)', 'Jabatan', 'Status'];
+      let csv = headers.join(',') + '\n';
+
+      // Data
+      data.forEach(item => {
+        const row = [
+          `"${item.nama}"`,
+          `"${item.nik}"`,
+          `"${item.alamat}"`,
+          `"${formatTanggal(item.mulai)}"`,
+          `"${item.pendidikan || '-'}"`,
+          `"${item.kontrak} Tahun"`,
+          `"${item.jabatan}"`,
+          `"${item.status}"`
+        ];
+        csv += row.join(',') + '\n';
+      });
+
+      // Download CSV
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Data-Karyawan-${new Date().toLocaleDateString('id-ID')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Data berhasil diekspor ke CSV (buka di Excel)");
     }
   </script>
 </body>
