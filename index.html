@@ -261,10 +261,18 @@
       </button>
     </div>
 
-    <!-- Pencarian -->
+    <!-- Pencarian & Ekspor -->
     <div class="card">
-      <h2><i class="fas fa-search"></i> Cari Karyawan</h2>
+      <h2><i class="fas fa-search"></i> Cari & Ekspor Data</h2>
       <input type="text" id="searchInput" class="search-box" placeholder="Cari berdasarkan nama, NIK, jabatan, dll..." onkeyup="searchKaryawan()">
+      <div style="text-align:right;">
+        <button class="btn-secondary btn-sm" onclick="cetakData()">
+          <i class="fas fa-print"></i> Cetak (PDF)
+        </button>
+        <button class="btn-primary btn-sm" onclick="exportToExcel()">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>    
+      </div>
     </div>
 
     <!-- Tabel Data -->
