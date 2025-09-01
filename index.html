@@ -163,7 +163,6 @@
   </style>
 </head>
 <body>
-
   <!-- Layar Login -->
   <div id="loginScreen" class="login-form">
     <h2><i class="fas fa-user-shield"></i> Login Admin</h2>
@@ -329,11 +328,15 @@
     const ADMIN_USER = "admin";
     const ADMIN_PASS = "password123";
 
+    // Variabel global untuk data
+    let allData = [];
+    let chart = null;
+
     // Cek login saat halaman dibuka
     window.onload = function() {
       if (localStorage.getItem('adminLoggedIn') === 'true') {
         tampilkanDashboard();
-        muatData();
+        muatData(); // ✅ PENTING: Muat data saat halaman dibuka
       }
     };
 
@@ -345,7 +348,7 @@
       if (username === ADMIN_USER && password === ADMIN_PASS) {
         localStorage.setItem('adminLoggedIn', 'true');
         tampilkanDashboard();
-        muatData();
+        muatData(); // ✅ Muat data setelah login
         showToast("Login berhasil!");
       } else {
         alert("Username atau password salah!");
@@ -365,6 +368,7 @@
     // Simpan data ke localStorage & file JSON
     function simpanData(data) {
       localStorage.setItem('karyawanData', JSON.stringify(data));
+      allData = data; // ✅ PERBAIKAN: Update allData langsung
       unduhJSON(data);
     }
 
@@ -380,10 +384,11 @@
     }
 
     // Muat data dari localStorage
-    let allData = [];
     function muatData() {
       const tbody = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
       tbody.innerHTML = '';
+      
+      // ✅ PERBAIKAN: Ambil data dari localStorage dan simpan ke allData
       allData = JSON.parse(localStorage.getItem('karyawanData')) || [];
 
       allData.forEach((item, index) => {
@@ -437,7 +442,7 @@
         </td>`;
       });
 
-      renderChart(); // Render grafik setelah muat data
+      renderChart(); // ✅ Render grafik setelah data dimuat
     }
 
     // Format tanggal
@@ -532,9 +537,7 @@
           showToast("Karyawan ditambahkan.");
         }
 
-        simpanData(data);
-        clearForm();
-        muatData(); // Refresh data dan grafik
+        simpanData(data); // ✅ simpanData() akan update allData dan render
       }
     }
 
@@ -571,9 +574,7 @@
       if (confirm("Hapus karyawan ini?")) {
         const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
         data.splice(index, 1);
-        simpanData(data);
-        muatData();
-        showToast("Karyawan dihapus.");
+        simpanData(data); // ✅ simpanData() akan update allData dan render
       }
     }
 
@@ -641,7 +642,6 @@
     }
 
     // Grafik Statistik
-    let chart = null;
     function renderChart() {
       const ctx = document.getElementById('statsChart').getContext('2d');
       if (chart) chart.destroy();
