@@ -86,7 +86,7 @@
       margin-bottom: 5px;
       font-weight: 500;
     }
-    .photo-preview {
+    .photo-preview, .dokumen-preview {
       width: 100px;
       height: 100px;
       border: 2px dashed #ddd;
@@ -95,6 +95,9 @@
       background-size: cover;
       background-position: center;
       background-color: #f7f7f7;
+    }
+    .dokumen-preview {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z'/%3E%3C/svg%3E");
     }
     table {
       width: 100%;
@@ -146,11 +149,14 @@
     .toast.show {
       opacity: 1;
     }
-    .hidden { display: none; }
+    .error {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
-
   <!-- Layar Login -->
   <div id="loginScreen" class="login-form">
     <h2><i class="fas fa-user-shield"></i> Login Admin</h2>
@@ -179,10 +185,12 @@
       <div class="form-group">
         <label>Nama Lengkap</label>
         <input type="text" id="nama" placeholder="Nama Lengkap">
+        <div id="errorNama" class="error"></div>
       </div>
       <div class="form-group">
         <label>NIK (16 digit)</label>
         <input type="text" id="nik" placeholder="Nomor Induk Kependudukan" maxlength="16">
+        <div id="errorNik" class="error"></div>
       </div>
       <div class="form-group">
         <label>Alamat</label>
@@ -306,10 +314,14 @@
     </div>
   </div>
 
+  <!-- Hidden input untuk simpan dokumen -->
+  <input type="hidden" id="dokumen">
+
   <script>
     // Username & password default
     const ADMIN_USER = "admin";
     const ADMIN_PASS = "password123";
+    let allData = [];
 
     // Cek login saat halaman dibuka
     window.onload = function() {
@@ -323,7 +335,6 @@
     function login() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-
       if (username === ADMIN_USER && password === ADMIN_PASS) {
         localStorage.setItem('adminLoggedIn', 'true');
         tampilkanDashboard();
@@ -344,25 +355,13 @@
       location.reload();
     }
 
-    // ✅ SIMPAN DATA KE localStorage SAJA (TANPA LANGSUNG DOWNLOAD)
+    // Simpan data ke localStorage SAJA
     function simpanData(data) {
       localStorage.setItem('karyawanData', JSON.stringify(data));
-      allData = data; // Update variabel global
-    }
-
-    function unduhJSON(data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `data-karyawan-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Data disimpan ke file JSON!");
+      allData = data;
     }
 
     // Muat data
-    let allData = [];
     function muatData() {
       const tbody = document.getElementById('karyawanTable').getElementsByTagName('tbody')[0];
       tbody.innerHTML = '';
@@ -409,8 +408,25 @@
       }
     }
 
+    // Preview dokumen
+    document.getElementById('dokumenKontrak').onchange = function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('dokumen').value = e.target.result;
+          document.getElementById('fileName').innerHTML = `<small>File: ${file.name}</small>`;
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
     // Simpan/Edit
     function simpanKaryawan() {
+      // Reset error
+      document.getElementById('errorNama').textContent = '';
+      document.getElementById('errorNik').textContent = '';
+
       const nama = getVal('nama');
       const nik = getVal('nik');
       const alamat = getVal('alamat');
@@ -421,50 +437,90 @@
       const status = getVal('status');
       const editId = document.getElementById('editId').value;
       const fotoInput = document.getElementById('foto');
-      let fotoURL = '';
+      const dokumenInput = document.getElementById('dokumenKontrak');
 
-      if (!nama || !nik || nik.length !== 16 || !status) {
-        alert("Nama, NIK (16 digit), dan Status wajib diisi.");
+      let fotoURL = '';
+      let dokumenURL = document.getElementById('dokumen').value;
+
+      // Validasi
+      if (!nama) {
+        document.getElementById('errorNama').textContent = 'Nama wajib diisi';
+        return;
+      }
+      if (!nik || nik.length !== 16) {
+        document.getElementById('errorNik').textContent = 'NIK harus 16 digit';
+        return;
+      }
+      if (!status) {
+        alert("Status wajib dipilih.");
         return;
       }
 
+      // Cek NIK duplikat (kecuali saat edit)
+      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
+      const exists = data.find((item, i) => item.nik === nik && i != editId);
+      if (exists) {
+        document.getElementById('errorNik').textContent = 'NIK sudah terdaftar';
+        return;
+      }
+
+      // Upload foto
       if (fotoInput.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
           fotoURL = e.target.result;
-          simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId);
+          lanjutSimpan();
         };
         reader.readAsDataURL(fotoInput.files[0]);
       } else {
-        const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
         fotoURL = editId !== "" ? data[editId].foto : '';
-        simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId);
+        lanjutSimpan();
+      }
+
+      function lanjutSimpan() {
+        // Upload dokumen
+        if (dokumenInput.files[0] && !dokumenURL) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            dokumenURL = e.target.result;
+            simpanKeData();
+          };
+          reader.readAsDataURL(dokumenInput.files[0]);
+        } else {
+          simpanKeData();
+        }
+      }
+
+      function simpanKeData() {
+        const item = { 
+          nama, nik, alamat, mulai, pendidikan, kontrak, 
+          jabatan, status, foto: fotoURL, dokumen: dokumenURL 
+        };
+
+        if (editId !== "") {
+          data[editId] = item;
+          showToast("Data diperbarui.");
+        } else {
+          data.push(item);
+          showToast("Karyawan ditambahkan.");
+        }
+        simpanData(data);
+        clearForm();
+        muatData();
       }
     }
 
     function getVal(id) { return document.getElementById(id).value.trim(); }
 
-    function simpanKeData(nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, fotoURL, editId) {
-      const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
-      const item = { nama, nik, alamat, mulai, pendidikan, kontrak, jabatan, status, foto: fotoURL };
-
-      if (editId !== "") {
-        data[editId] = item;
-        showToast("Data diperbarui.");
-      } else {
-        data.push(item);
-        showToast("Karyawan ditambahkan.");
-      }
-
-      simpanData(data);
-      clearForm();
-      muatData();
-    }
-
-    // Edit
+    // Edit Karyawan (DIPERBAIKI)
     function editKaryawan(index) {
       const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
       const item = data[index];
+      if (!item) {
+        alert("Data tidak ditemukan.");
+        return;
+      }
+
       document.getElementById('editId').value = index;
       setVal('nama', item.nama);
       setVal('nik', item.nik);
@@ -474,11 +530,20 @@
       setVal('kontrak', item.kontrak);
       setVal('jabatan', item.jabatan);
       setVal('status', item.status);
+
+      // Foto
       document.getElementById('photoPreview').style.backgroundImage = item.foto ? `url(${item.foto})` : '';
+
+      // Dokumen
+      document.getElementById('dokumen').value = item.dokumen || '';
+      document.getElementById('fileName').innerHTML = item.dokumen ? '<small>File kontrak sudah ada</small>' : '';
+
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Karyawan';
     }
 
-    function setVal(id, val) { document.getElementById(id).value = val; }
+    function setVal(id, val) { 
+      if (document.getElementById(id)) document.getElementById(id).value = val; 
+    }
 
     // Hapus
     function hapusKaryawan(index) {
@@ -539,34 +604,20 @@
     function renderChart() {
       const ctx = document.getElementById('statsChart').getContext('2d');
       if (chart) chart.destroy();
-
       const wilayah = {}, pendidikan = {}, jabatan = {};
       allData.forEach(item => {
         wilayah[item.alamat] = (wilayah[item.alamat] || 0) + 1;
         pendidikan[item.pendidikan] = (pendidikan[item.pendidikan] || 0) + 1;
         jabatan[item.jabatan] = (jabatan[item.jabatan] || 0) + 1;
       });
-
       chart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: Object.keys(wilayah),
           datasets: [
-            {
-              label: 'Jumlah per Wilayah',
-              data: Object.values(wilayah),
-              backgroundColor: '#4CAF50'
-            },
-            {
-              label: 'Pendidikan',
-              data: Object.values(pendidikan),
-              backgroundColor: '#2196F3'
-            },
-            {
-              label: 'Jabatan',
-              data: Object.values(jabatan),
-              backgroundColor: '#FF9800'
-            }
+            { label: 'Wilayah', data: Object.values(wilayah), backgroundColor: '#4CAF50' },
+            { label: 'Pendidikan', data: Object.values(pendidikan), backgroundColor: '#2196F3' },
+            { label: 'Jabatan', data: Object.values(jabatan), backgroundColor: '#FF9800' }
           ]
         },
         options: {
@@ -582,10 +633,15 @@
       document.getElementById('editId').value = '';
       document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(inp => inp.value = '');
       document.getElementById('photoPreview').style.backgroundImage = '';
+      document.getElementById('dokumen').value = '';
+      document.getElementById('fileName').innerHTML = '';
       document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-plus"></i> Tambah Karyawan';
+      // Reset error
+      document.getElementById('errorNama').textContent = '';
+      document.getElementById('errorNik').textContent = '';
     }
 
-        // Notifikasi
+    // Notifikasi
     function showToast(msg) {
       const toast = document.getElementById('toast');
       toast.textContent = msg;
@@ -595,12 +651,12 @@
 
     // Cetak (PDF)
     function cetakData() {
-      const printWindow = window.open('', '_blank');
       const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
       if (data.length === 0) {
         alert("Belum ada data untuk dicetak.");
         return;
       }
+      const printWindow = window.open('', '_blank');
       let rows = '';
       data.forEach(item => {
         rows += `
@@ -658,19 +714,15 @@
       printWindow.document.close();
     }
 
-    // Export ke Excel (sebagai CSV)
+    // Export ke Excel (CSV)
     function exportToExcel() {
       const data = JSON.parse(localStorage.getItem('karyawanData')) || [];
       if (data.length === 0) {
         alert("Belum ada data untuk diekspor.");
         return;
       }
-
-      // Header CSV
       const headers = ['Nama', 'NIK', 'Alamat', 'Mulai Kerja', 'Pendidikan', 'Kontrak (Tahun)', 'Jabatan', 'Status'];
       let csv = headers.join(',') + '\n';
-
-      // Data
       data.forEach(item => {
         const row = [
           `"${item.nama}"`,
@@ -684,8 +736,6 @@
         ];
         csv += row.join(',') + '\n';
       });
-
-      // Download CSV
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -693,7 +743,7 @@
       a.download = `Data-Karyawan-${new Date().toLocaleDateString('id-ID')}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Data berhasil diekspor ke CSV (buka di Excel)");
+      showToast("Data berhasil diekspor ke CSV");
     }
   </script>
 </body>
